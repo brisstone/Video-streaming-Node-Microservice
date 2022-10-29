@@ -1,0 +1,61 @@
+version: "3"
+#  Bind Remote RabbitMQ IP 5672 to local cloneIp 5674 cuz It is already in use
+services:
+  # rabbitmq:
+  #   image: rabbitmq:3.8-management-alpine
+  #   container_name: "rabbitmq"
+  #   ports:
+  #     - 5672:5672
+  #     - 15672:15672
+  #     - 15671:15671
+  #   volumes:
+  #     - ./rabbitmq/lib:/var/lib/rabbitmq
+  #     - ./rabbitmq/log:/var/log/rabbitmq
+ 
+  nosql-db:
+    image: mongo
+    ports:
+      - "27018:27017"
+    container_name: nosql-db
+    volumes:
+      - ./db/:/data/db
+  user:
+    build:
+      dockerfile: Dockerfile
+      context: ./user
+    container_name: user
+    ports:
+      - "8002:8002"
+    restart: always
+    depends_on:
+      - "nosql-db"
+    volumes:
+      - .:/app
+      - /app/user/node_modules
+
+    env_file:
+      - ./user/.env.dev
+  posts:
+    build:
+      dockerfile: Dockerfile
+      context: ./posts
+    container_name: posts
+    ports:
+      - "8003:8003"
+    restart: always
+    depends_on:
+      - "nosql-db"
+    volumes:
+      - .:/app
+      - /app/posts/node_modules
+    env_file:
+      - ./posts/.env.dev
+  nginx-proxy:
+    build:
+      dockerfile: Dockerfile
+      context: ./proxy
+    depends_on:
+      - user
+      - posts
+    ports:
+      - 80:80
